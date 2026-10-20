@@ -1,5 +1,13 @@
 const { encodeHeader, decodeHeader, macFromString } = require('./haCommandHeader');
-const { COMMAND, JOIN_SUBCOMMAND, HVAC_MODE, HVAC_FAN_MODE, HVAC_STATUS_PAYLOAD_OFFSETS } = require('./constants');
+const {
+  COMMAND,
+  JOIN_SUBCOMMAND,
+  HVAC_MODE,
+  HVAC_FAN_MODE,
+  HVAC_SWING_FLAG,
+  HVAC_SWING_ON_TRIGGER_PAYLOAD,
+  HVAC_STATUS_PAYLOAD_OFFSETS,
+} = require('./constants');
 
 // Thin layer over HACommandHeader that assembles a full HACommand packet (header + payload) for
 // known command types. Command IDs come from constants.js and are unconfirmed placeholders; calls
@@ -93,10 +101,12 @@ function buildCurtainSetPosition({ transport, destinationMAC, endpoint, position
 
 // Validated against github.com/firtman/bgh_smart's working local-UDP implementation (cross-checked
 // with our own power-on/off capture): commandID=HVAC_COMMAND (0x61), destinationEndpoint=1,
-// payload = [mode, fanSpeed, 0x00, tempLowByte, tempHighByte] when setting a temperature, or
-// [mode, fanSpeed, 0x00, 0x00, 0x80] when only mode/fan matter. Pass HVAC_MODE.NO_CHANGE /
+// payload = [mode, fanSpeed, swingFlag, tempLowByte, tempHighByte] when setting a temperature, or
+// [mode, fanSpeed, swingFlag, 0x00, 0x80] when only mode/fan/swing matter. Pass HVAC_MODE.NO_CHANGE /
 // HVAC_FAN_MODE.NO_CHANGE to leave that field alone (0xff is the device's own "don't touch" sentinel).
-function buildHvacSetModes({ transport, destinationMAC, endpoint = 1, mode, fanSpeed, targetTempC }) {
+// `swing` (HVAC_SWING_FLAG.ON/OFF) is tentative — see constants.js — and defaults to OFF, matching
+// every capture taken before swing support existed.
+function buildHvacSetModes({ transport, destinationMAC, endpoint = 1, mode, fanSpeed, swing, targetTempC }) {
   let tail;
   if (targetTempC === undefined) {
     tail = Buffer.from([0x00, 0x80]);
@@ -108,7 +118,7 @@ function buildHvacSetModes({ transport, destinationMAC, endpoint = 1, mode, fanS
     Buffer.from([
       mode === undefined ? HVAC_MODE.NO_CHANGE : mode,
       fanSpeed === undefined ? HVAC_FAN_MODE.NO_CHANGE : fanSpeed,
-      0x00,
+      swing === undefined ? HVAC_SWING_FLAG.OFF : swing,
     ]),
     tail,
   ]);
@@ -118,6 +128,19 @@ function buildHvacSetModes({ transport, destinationMAC, endpoint = 1, mode, fanS
     destinationEndpoint: endpoint,
     commandID: requireConstant(COMMAND.HVAC_COMMAND, 'COMMAND.HVAC_COMMAND'),
     payload,
+  });
+}
+
+// Tentative (see constants.js HVAC_SWING_ON_TRIGGER_PAYLOAD): sent alongside an HVAC_COMMAND whose
+// swing flag is ON, every time that command was resent in the one capture we have. Meaning and
+// whether an OFF counterpart exists are unconfirmed.
+function buildHvacSwingOnTrigger({ transport, destinationMAC, endpoint = 1 }) {
+  return buildPacket({
+    transport,
+    destinationMAC,
+    destinationEndpoint: endpoint,
+    commandID: requireConstant(COMMAND.HVAC_SWING, 'COMMAND.HVAC_SWING'),
+    payload: HVAC_SWING_ON_TRIGGER_PAYLOAD,
   });
 }
 
@@ -177,6 +200,7 @@ module.exports = {
   buildSwitchSetOnOff,
   buildHvacPower,
   buildHvacSetModes,
+  buildHvacSwingOnTrigger,
   buildHvacStatusRequest,
   parseStatusReport,
   buildDimmerSetValue,

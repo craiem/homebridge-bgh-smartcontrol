@@ -30,6 +30,10 @@ const COMMAND = {
   CURTAIN_STOP: UNKNOWN,
   HVAC_SET_MODE: UNKNOWN, // mode/temp SET payload layout not captured yet, only power on/off
   HVAC_COMMAND: 0x61, // confirmed: destinationEndpoint=1, payload [powerByte, 0xff, 0xff, 0x00, 0x80]
+  HVAC_SWING: 0x62, // confirmed: destinationEndpoint=1, payload [0x51], sent paired with an
+  // HVAC_COMMAND whose swing flag byte is ON — see HVAC_SWING_FLAG below. Replaying both against a
+  // real BGH-7012 ("Habitación Principal") visibly started the swing motor; sending swing OFF
+  // (without this trigger) visibly stopped it.
   SWITCH_ON: UNKNOWN,
   SWITCH_OFF: UNKNOWN,
   DIM: UNKNOWN,
@@ -111,6 +115,17 @@ const HVAC_FAN_MODE = {
 // accept 17-30 — trust the hardware over the reference project here.
 const HVAC_TEMP_RANGE_C = { min: 17, max: 30 };
 
+// Confirmed 2026-10-20: captured toggling swing on/off on a real BGH-7012 ("Habitación Principal")
+// via the official app, then replayed both values (plus HVAC_SWING's trigger, below) against the
+// same unit and visually confirmed the swing motor started and stopped accordingly. This is the
+// 3rd byte of HVAC_COMMAND's payload (previously assumed to always be 0x00).
+const HVAC_SWING_FLAG = { OFF: 0x00, ON: 0x10 };
+
+// Confirmed 2026-10-20 (see HVAC_SWING_FLAG): the payload sent with COMMAND.HVAC_SWING (0x62)
+// alongside HVAC_SWING_FLAG.ON to actually start the swing motor. Meaning of the single byte value
+// itself (0x51) is still unconfirmed — could be a fixed sub-command id rather than an on/off value.
+const HVAC_SWING_ON_TRIGGER_PAYLOAD = Buffer.from([0x51]);
+
 // HACommand_StatusHVAC broadcast payload (confirmed against our own captures), as bytes
 // *after* the 17-byte header: [0]=report tag (always seen as 0x06), [1]=mode (HVAC_MODE),
 // [2]=fan speed (HVAC_FAN_MODE), [3]=unused/0, [4:6]=ambient temp *100 LE u16,
@@ -135,6 +150,8 @@ module.exports = {
   HVAC_MODE,
   HVAC_FAN_MODE,
   HVAC_TEMP_RANGE_C,
+  HVAC_SWING_FLAG,
+  HVAC_SWING_ON_TRIGGER_PAYLOAD,
   HVAC_STATUS_PAYLOAD_OFFSETS,
   UNKNOWN,
 };

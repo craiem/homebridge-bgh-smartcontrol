@@ -20,10 +20,18 @@ Confirmed and implemented:
   and firmware string (tested: found all 4 real units).
 - **Status**: request-and-parse (and passive broadcast listening) for mode, fan speed, ambient
   temperature, and target temperature (tested against real hardware).
-- **Control**: power on/off, mode (off/cool/heat/dry/fan/auto), fan speed, and target temperature
-  (power on/off tested live against real hardware and visually confirmed; mode/fan/temp payload
-  layout is cross-validated against firtman/bgh_smart's independently-working implementation but
-  not separately captured by us).
+- **Control**: power on/off, mode (off/cool/heat/auto — HomeKit's Thermostat service has no
+  dry/fan-only equivalent), fan speed (auto/low/medium/high, exposed as a separate Fanv2 service),
+  swing (exposed as that same Fanv2 service's `SwingMode`, inside the accessory's settings screen —
+  Apple's Home app doesn't surface it in the quick-control sheet), and target temperature. Power
+  on/off and swing were tested live against real hardware and visually confirmed; mode/fan/temp
+  payload layout is cross-validated against firtman/bgh_smart's independently-working implementation.
+
+Swing is newer and less battle-tested than the rest: confirmed by toggling it on/off from the
+official app while capturing the traffic, then replaying both values (plus command `0x62`'s
+trigger, needed to actually start the motor) against one real unit. Only tested on a single unit in
+a single session — watch the real unit the first few times you use it. See `HVAC_SWING_FLAG` and
+`HVAC_SWING_ON_TRIGGER_PAYLOAD` in `src/protocol/constants.js` for details and caveats.
 
 Not implemented: switch/dimmer/curtain/lock command payloads (`src/protocol/haCommand.js` has
 stubs with placeholder command IDs in `src/protocol/constants.js` — this app controls HVAC units
@@ -39,9 +47,13 @@ only, so those were never captured).
 - Discovery: command `0xa1` (JOIN) with payload `[0x04]` (ENUMERATE_ALL) broadcast; each device
   replies with the same command ID and payload `[0x02, ...ASCII "<Model>,<firmware>"]`.
 - HVAC control: command `0x61` to destinationEndpoint `1`, payload
-  `[mode, fanSpeed, 0x00, tempLowByte, tempHighByte]` (or `[mode, fanSpeed, 0x00, 0x00, 0x80]` to
-  leave the temperature alone). `mode`/`fanSpeed` can be `0xff` ("don't change"); mode `0xfd` means
+  `[mode, fanSpeed, swingFlag, tempLowByte, tempHighByte]` (or `[mode, fanSpeed, swingFlag, 0x00, 0x80]`
+  to leave the temperature alone). `mode`/`fanSpeed` can be `0xff` ("don't change"); mode `0xfd` means
   "turn on, resume whatever mode was last active" — what the official app's plain on/off toggle sends.
+  `swingFlag` is `0x00`/`0x10` for off/on (no "don't change" sentinel confirmed yet, so every command
+  should carry the unit's full desired state, matching how the official app itself operates).
+- Swing: enabling it also requires command `0x62` to destinationEndpoint `1` with payload `[0x51]`,
+  sent once right after the `0x61` command that carries `swingFlag = 0x10`.
 - Status: devices periodically (and in reply to a `0xe4` PING to endpoint 1) broadcast command
   `0xfd` (STATUS_REPORT) with mode/fan/ambient-temp/target-temp in the payload.
 
@@ -54,6 +66,7 @@ commented with how it was confirmed.
 node tools/discover.js                                   # list every unit on the LAN
 node tools/test-status.js <mac> <ip>                      # read a unit's current status
 node tools/test-hvac-power.js <mac> <ip> on|off           # turn a unit on/off directly
+node tools/test-hvac-swing.js <mac> <ip> on|off           # toggle swing directly (watch the unit)
 ```
 
 ## Configuration
