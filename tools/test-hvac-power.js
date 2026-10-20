@@ -3,7 +3,7 @@
 // no Homebridge involved. Usage:
 //   node tools/test-hvac-power.js <mac> <ip> <on|off>
 // Example:
-//   node tools/test-hvac-power.js ac:cf:23:a8:aa:6e 192.168.86.210 on
+//   node tools/test-hvac-power.js aa:bb:cc:dd:ee:ff 192.168.1.50 on
 
 const { UdpTransport } = require('../src/transport/udpTransport');
 const { macFromString } = require('../src/protocol/haCommandHeader');

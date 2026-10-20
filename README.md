@@ -67,7 +67,7 @@ discovered device's MAC/IP/model at startup, to make this easy to fill in):
     {
       "platform": "BGHSmartControl",
       "devices": [
-        { "name": "Living Room AC", "type": "hvac", "mac": "ac:cf:23:a8:aa:6e", "ip": "192.168.86.210" }
+        { "name": "Living Room AC", "type": "hvac", "mac": "aa:bb:cc:dd:ee:ff", "ip": "192.168.1.50" }
       ]
     }
   ]
