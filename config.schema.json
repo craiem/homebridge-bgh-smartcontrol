@@ -1,0 +1,41 @@
+{
+  "pluginAlias": "BGHSmartControl",
+  "pluginType": "platform",
+  "singular": true,
+  "headerDisplay": "Unofficial local-network control for BGH/Solidmation Smart Control devices. Protocol constants are still being confirmed from a packet capture — see README.md before expecting this to work.",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "devices": {
+        "type": "array",
+        "title": "Devices",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string", "title": "Name", "required": true },
+            "type": {
+              "type": "string",
+              "title": "Type",
+              "oneOf": [
+                { "title": "Air Conditioner / HVAC", "enum": ["hvac"] },
+                { "title": "Switch", "enum": ["switch"] },
+                { "title": "Dimmer", "enum": ["dimmer"] },
+                { "title": "Curtain / Blind", "enum": ["curtain"] },
+                { "title": "Door Lock", "enum": ["lock"] }
+              ],
+              "required": true
+            },
+            "mac": {
+              "type": "string",
+              "title": "Device MAC address",
+              "pattern": "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$",
+              "required": true
+            },
+            "ip": { "type": "string", "title": "Device local IP address", "format": "ipv4", "required": true },
+            "endpoint": { "type": "integer", "title": "Endpoint ID", "default": 0 }
+          }
+        }
+      }
+    }
+  }
+}

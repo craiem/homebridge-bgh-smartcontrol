@@ -1,0 +1,41 @@
+const { buildDimmerSetValue } = require('../protocol/haCommand');
+
+// Binds a Homebridge Lightbulb (on/off + brightness) service to a BGH dimmer endpoint.
+function bindDimmerAccessory({ platform, accessory, device }) {
+  const { Service, Characteristic } = platform;
+  const service =
+    accessory.getService(Service.Lightbulb) || accessory.addService(Service.Lightbulb, device.name);
+
+  let currentOn = false;
+  let currentBrightness = 100;
+
+  const send = async (level) => {
+    const packet = buildDimmerSetValue({
+      transport: platform.transport,
+      destinationMAC: device.mac,
+      endpoint: device.endpoint,
+      level,
+    });
+    await platform.transport.sendTo(packet, device.ip);
+  };
+
+  service
+    .getCharacteristic(Characteristic.On)
+    .onGet(() => currentOn)
+    .onSet(async (value) => {
+      currentOn = Boolean(value);
+      await send(currentOn ? currentBrightness : 0);
+    });
+
+  service
+    .getCharacteristic(Characteristic.Brightness)
+    .onGet(() => currentBrightness)
+    .onSet(async (value) => {
+      currentBrightness = value;
+      if (currentOn) await send(currentBrightness);
+    });
+
+  return service;
+}
+
+module.exports = { bindDimmerAccessory };
