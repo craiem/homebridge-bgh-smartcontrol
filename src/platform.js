@@ -7,6 +7,7 @@ const { bindDimmerAccessory } = require('./accessories/dimmerAccessory');
 const { bindCurtainAccessory } = require('./accessories/curtainAccessory');
 const { bindLockAccessory } = require('./accessories/lockAccessory');
 const { scanForDevices } = require('./discovery');
+const { DeviceDirectory } = require('./deviceDirectory');
 
 const ACCESSORY_BINDERS = {
   switch: bindSwitchAccessory,
@@ -31,6 +32,7 @@ class BGHSmartControlPlatform {
     this.accessories = new Map();
     this.transport = new UdpTransport({ log });
     this.hvacByMac = new Map(); // mac string -> { updateFromStatus, requestInitialStatus }
+    this.directory = new DeviceDirectory(); // mac string -> last-observed IP (self-healing against DHCP changes)
 
     this.api.on('didFinishLaunching', () => this._onDidFinishLaunching());
     this.api.on('shutdown', () => this.transport.stop());
@@ -67,9 +69,12 @@ class BGHSmartControlPlatform {
         `HACommand from ${rinfo.address}:${rinfo.port} cmd=${decoded.commandID} seq=${decoded.sequenceNumber} ` +
           `payload=${decoded.payload.toString('hex')}`,
       );
+      const senderMac = macToString(decoded.sourceMAC);
+      if (senderMac !== '00:00:00:00:00:00') this.directory.observe(senderMac, rinfo.address);
+
       const status = parseStatusReport(decoded);
       if (!status) return;
-      const hvac = this.hvacByMac.get(macToString(decoded.sourceMAC));
+      const hvac = this.hvacByMac.get(senderMac);
       if (hvac) hvac.updateFromStatus(status);
     });
 
@@ -79,7 +84,10 @@ class BGHSmartControlPlatform {
         `${PLATFORM_NAME}: discovered ${found.length} device(s) on the LAN (for reference — devices ` +
           `are still registered from config.json, not auto-added):`,
       );
-      for (const d of found) this.log.info(`  ${d.ip}  ${d.mac}  ${d.model} fw ${d.firmwareVersion}`);
+      for (const d of found) {
+        this.log.info(`  ${d.ip}  ${d.mac}  ${d.model} fw ${d.firmwareVersion}`);
+        this.directory.observe(d.mac, d.ip);
+      }
     } catch (err) {
       this.log.warn(`${PLATFORM_NAME}: discovery scan failed (${err.message}); continuing with configured devices only.`);
     }
@@ -109,7 +117,18 @@ class BGHSmartControlPlatform {
       this.accessories.set(uuid, accessory);
     }
 
-    const device = { name, mac: macFromString(mac), ip, endpoint };
+    const directory = this.directory;
+    const device = {
+      name,
+      mac: macFromString(mac),
+      endpoint,
+      // Resolved live on every access: prefers the most recent IP actually observed on the wire
+      // for this MAC over the config.json bootstrap value, so a DHCP lease change self-heals
+      // instead of silently sending commands to a stale address.
+      get ip() {
+        return directory.resolve(mac, ip);
+      },
+    };
     const result = bind({ platform: this, accessory, device });
     if (type === 'hvac' && result?.updateFromStatus) {
       this.hvacByMac.set(mac.toLowerCase(), result);
