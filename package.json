@@ -1,22 +1,39 @@
 {
   "name": "homebridge-bgh-smartcontrol",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Unofficial local-network Homebridge plugin for BGH/Solidmation Smart Control home-automation hubs (reverse-engineered HACommand UDP protocol).",
   "main": "index.js",
   "license": "MIT",
-  "private": true,
+  "author": "craiem",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/craiem/homebridge-bgh-smartcontrol.git"
+  },
+  "bugs": {
+    "url": "https://github.com/craiem/homebridge-bgh-smartcontrol/issues"
+  },
+  "homepage": "https://github.com/craiem/homebridge-bgh-smartcontrol#readme",
   "engines": {
     "node": ">=18.0.0",
     "homebridge": ">=1.6.0"
   },
   "keywords": [
     "homebridge-plugin",
+    "supports-hap",
     "bgh",
     "solidmation",
-    "smart-control"
+    "smart-control",
+    "hvac",
+    "air-conditioner"
   ],
   "scripts": {
     "decode-capture": "node tools/decode-capture.js"
   },
-  "dependencies": {}
+  "dependencies": {},
+  "files": [
+    "index.js",
+    "src",
+    "config.schema.json",
+    "README.md"
+  ]
 }
