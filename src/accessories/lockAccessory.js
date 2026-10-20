@@ -21,17 +21,22 @@ function bindLockAccessory({ platform, accessory, device }) {
     )
     .onSet(async (value) => {
       const locked = value === Characteristic.LockTargetState.SECURED;
-      const packet = buildDoorlockSetValue({
-        transport: platform.transport,
-        destinationMAC: device.mac,
-        endpoint: device.endpoint,
-        locked,
-      });
-      await platform.transport.sendTo(packet, device.ip);
-      currentState = locked
-        ? Characteristic.LockCurrentState.SECURED
-        : Characteristic.LockCurrentState.UNSECURED;
-      service.updateCharacteristic(Characteristic.LockCurrentState, currentState);
+      try {
+        const packet = buildDoorlockSetValue({
+          transport: platform.transport,
+          destinationMAC: device.mac,
+          endpoint: device.endpoint,
+          locked,
+        });
+        await platform.transport.sendTo(packet, device.ip);
+        currentState = locked
+          ? Characteristic.LockCurrentState.SECURED
+          : Characteristic.LockCurrentState.UNSECURED;
+        service.updateCharacteristic(Characteristic.LockCurrentState, currentState);
+      } catch (err) {
+        platform.log.error(`${device.name}: failed to set lock state: ${err.message}`);
+        throw new platform.api.hap.HapStatusError(platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+      }
     });
 
   return service;

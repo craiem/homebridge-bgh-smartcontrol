@@ -19,14 +19,19 @@ function bindCurtainAccessory({ platform, accessory, device }) {
     .getCharacteristic(Characteristic.TargetPosition)
     .onGet(() => currentPosition)
     .onSet(async (value) => {
-      const packet = buildCurtainSetPosition({
-        transport: platform.transport,
-        destinationMAC: device.mac,
-        endpoint: device.endpoint,
-        position: value,
-      });
-      await platform.transport.sendTo(packet, device.ip);
-      currentPosition = value;
+      try {
+        const packet = buildCurtainSetPosition({
+          transport: platform.transport,
+          destinationMAC: device.mac,
+          endpoint: device.endpoint,
+          position: value,
+        });
+        await platform.transport.sendTo(packet, device.ip);
+        currentPosition = value;
+      } catch (err) {
+        platform.log.error(`${device.name}: failed to set curtain position to ${value}: ${err.message}`);
+        throw new platform.api.hap.HapStatusError(platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+      }
     });
 
   return service;

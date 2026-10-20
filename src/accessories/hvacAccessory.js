@@ -61,31 +61,41 @@ function bindHvacAccessory({ platform, accessory, device }) {
     .getCharacteristic(Characteristic.TargetTemperature)
     .onGet(() => targetTempC)
     .onSet(async (value) => {
-      targetTempC = value;
-      const packet = buildHvacSetModes({
-        transport: platform.transport,
-        destinationMAC: device.mac,
-        endpoint: device.endpoint || 1,
-        fanSpeed: HVAC_FAN_MODE.HIGH,
-        targetTempC: value,
-      });
-      await platform.transport.sendTo(packet, device.ip);
+      try {
+        const packet = buildHvacSetModes({
+          transport: platform.transport,
+          destinationMAC: device.mac,
+          endpoint: device.endpoint || 1,
+          fanSpeed: HVAC_FAN_MODE.HIGH,
+          targetTempC: value,
+        });
+        await platform.transport.sendTo(packet, device.ip);
+        targetTempC = value;
+      } catch (err) {
+        platform.log.error(`${device.name}: failed to set target temperature to ${value}: ${err.message}`);
+        throw new platform.api.hap.HapStatusError(platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+      }
     });
 
   service
     .getCharacteristic(Characteristic.TargetHeatingCoolingState)
     .onSet(async (value) => {
       const mode = homeKitModeToBgh(value, Characteristic);
-      currentMode = mode;
-      const packet = buildHvacSetModes({
-        transport: platform.transport,
-        destinationMAC: device.mac,
-        endpoint: device.endpoint || 1,
-        mode,
-        fanSpeed: HVAC_FAN_MODE.HIGH,
-      });
-      await platform.transport.sendTo(packet, device.ip);
-      service.updateCharacteristic(Characteristic.CurrentHeatingCoolingState, bghModeToHomeKit(mode, Characteristic));
+      try {
+        const packet = buildHvacSetModes({
+          transport: platform.transport,
+          destinationMAC: device.mac,
+          endpoint: device.endpoint || 1,
+          mode,
+          fanSpeed: HVAC_FAN_MODE.HIGH,
+        });
+        await platform.transport.sendTo(packet, device.ip);
+        currentMode = mode;
+        service.updateCharacteristic(Characteristic.CurrentHeatingCoolingState, bghModeToHomeKit(mode, Characteristic));
+      } catch (err) {
+        platform.log.error(`${device.name}: failed to set mode: ${err.message}`);
+        throw new platform.api.hap.HapStatusError(platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+      }
     })
     .onGet(() => {
       switch (currentMode) {
