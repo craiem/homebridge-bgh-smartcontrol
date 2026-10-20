@@ -115,6 +115,15 @@ class BGHSmartControlPlatform {
       accessory = new this.api.platformAccessory(name, uuid);
       this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
       this.accessories.set(uuid, accessory);
+    } else if (accessory.displayName !== name) {
+      // Cached accessories survive restarts with their original name baked in; without this, a
+      // rename in config.json (e.g. fixing "Aire 1" to the real room name) would silently not
+      // apply on an existing install.
+      accessory.displayName = name;
+      accessory
+        .getService(this.Service.AccessoryInformation)
+        ?.updateCharacteristic(this.Characteristic.Name, name);
+      this.api.updatePlatformAccessories([accessory]);
     }
 
     const directory = this.directory;

@@ -40,6 +40,7 @@ function bindHvacAccessory({ platform, accessory, device }) {
   const { Service, Characteristic } = platform;
   const service =
     accessory.getService(Service.Thermostat) || accessory.addService(Service.Thermostat, device.name);
+  service.updateCharacteristic(Characteristic.Name, device.name); // keep in sync on a config.json rename
 
   let currentTempC = 24;
   let targetTempC = 24;

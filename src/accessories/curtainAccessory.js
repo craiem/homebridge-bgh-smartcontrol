@@ -8,6 +8,7 @@ function bindCurtainAccessory({ platform, accessory, device }) {
   const service =
     accessory.getService(Service.WindowCovering) ||
     accessory.addService(Service.WindowCovering, device.name);
+  service.updateCharacteristic(Characteristic.Name, device.name); // keep in sync on a config.json rename
 
   let currentPosition = 50;
 

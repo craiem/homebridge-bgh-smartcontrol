@@ -5,6 +5,7 @@ function bindDimmerAccessory({ platform, accessory, device }) {
   const { Service, Characteristic } = platform;
   const service =
     accessory.getService(Service.Lightbulb) || accessory.addService(Service.Lightbulb, device.name);
+  service.updateCharacteristic(Characteristic.Name, device.name); // keep in sync on a config.json rename
 
   let currentOn = false;
   let currentBrightness = 100;

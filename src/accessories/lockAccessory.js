@@ -6,6 +6,7 @@ function bindLockAccessory({ platform, accessory, device }) {
   const service =
     accessory.getService(Service.LockMechanism) ||
     accessory.addService(Service.LockMechanism, device.name);
+  service.updateCharacteristic(Characteristic.Name, device.name); // keep in sync on a config.json rename
 
   let currentState = Characteristic.LockCurrentState.SECURED;
 
