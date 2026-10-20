@@ -107,7 +107,9 @@ const HVAC_FAN_MODE = {
   NO_CHANGE: 0xff,
 };
 
-const HVAC_TEMP_RANGE_C = { min: 16, max: 30 };
+// firtman/bgh_smart's const.py says 16-30, but the user confirmed their real BGH-7012 units only
+// accept 17-30 — trust the hardware over the reference project here.
+const HVAC_TEMP_RANGE_C = { min: 17, max: 30 };
 
 // HACommand_StatusHVAC broadcast payload (confirmed against our own captures), as bytes
 // *after* the 17-byte header: [0]=report tag (always seen as 0x06), [1]=mode (HVAC_MODE),
