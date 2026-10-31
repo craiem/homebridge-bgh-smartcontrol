@@ -1,6 +1,6 @@
 {
   "name": "homebridge-bgh-smartcontrol",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Unofficial local-network Homebridge plugin for BGH/Solidmation Smart Control home-automation hubs (reverse-engineered HACommand UDP protocol).",
   "main": "index.js",
   "license": "MIT",
